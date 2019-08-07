@@ -1,0 +1,150 @@
+version: '3'
+
+services:
+    spark-master:
+        build:
+            context: ./spark
+        container_name: spark-master
+        hostname: spark-master
+        ports:
+            - 8080:8080
+            - 7077:7077
+            - 4040:4040
+            - 8998:8998
+        networks:
+            - spark-network
+        volumes:
+            - ./spark/conf:/etc/conf.d/hadoop:ro
+        environment:
+            - "SPARK_LOCAL_IP=spark-master"
+            - "SPARK_MASTER_PORT=7077"
+            - "SPARK_MASTER_WEBUI_PORT=8080"
+        command: "/start-master.sh"
+
+    spark-worker:
+        build:
+            context: ./spark
+        depends_on:
+            - spark-master
+        ports:
+            - 8080
+        networks:
+            - spark-network
+        volumes:
+            - ./spark/conf:/etc/conf.d/hadoop:ro
+        environment:
+            - "SPARK_MASTER=spark://spark-master:7077"
+            - "SPARK_WORKER_WEBUI_PORT=8080"
+        command:
+            - "/start-worker.sh"   
+
+    jupyter-lab:
+        build:
+            context: ./jupyter
+        depends_on:
+            - spark-master
+        volumes:
+            - jupyter_data:/home/jovyan/work:rw
+        ports:
+            - 8888:8888
+        networks:
+            - spark-network
+        environment:
+            - JUPYTER_ENABLE_LAB=yes
+            - PYSPARK_PYTHON="/usr/bin/python3"
+    
+    namenode:
+        image: bde2020/hadoop-namenode:2.0.0-hadoop3.1.1-java8
+        container_name: namenode
+        build:
+            context: ./docker-hadoop/namenode 
+        ports:
+            - 9870:9870
+        volumes:
+            - hadoop_namenode:/hadoop/dfs/name
+        environment:
+            - CLUSTER_NAME=test
+        env_file:
+            - ./docker-hadoop/hadoop.env
+        networks:
+            - spark-network
+
+    datanode1:
+        image: bde2020/hadoop-datanode:2.0.0-hadoop3.1.1-java8
+        container_name: datanode1
+        build:
+             context: ./docker-hadoop/datanode
+        volumes:
+            - hadoop_datanode1:/hadoop/dfs/data
+        environment:
+            CONDITION: "namenode:9870"
+        env_file:
+            - ./docker-hadoop/hadoop.env
+        networks:
+            - spark-network
+    
+    datanode2:
+        image: bde2020/hadoop-datanode:2.0.0-hadoop3.1.1-java8
+        container_name: datanode2
+        build:
+             context: ./docker-hadoop/datanode
+        volumes:
+            - hadoop_datanode2:/hadoop/dfs/data
+        environment:
+            CONDITION: "namenode:9870"
+        env_file:
+            - ./docker-hadoop/hadoop.env
+        networks:
+            - spark-network
+  
+    resourcemanager:
+        image: bde2020/hadoop-resourcemanager:2.0.0-hadoop3.1.1-java8
+        container_name: resourcemanager
+        build:    
+            context: ./docker-hadoop/resourcemanager
+        environment:
+            SERVICE_PRECONDITION: "namenode:9870 datanode1:9864 datanode2:9864"
+        env_file:
+            - ./docker-hadoop/hadoop.env
+        networks:
+            - spark-network
+
+    nodemanager1:
+        image: bde2020/hadoop-nodemanager:2.0.0-hadoop3.1.1-java8
+        container_name: nodemanager
+        build: 
+            context: docker-hadoop/nodemanager
+        environment:
+            SERVICE_PRECONDITION: "namenode:9870 datanode1:9864 datanode2:9864 resourcemanager:8088"
+        env_file:
+            - ./docker-hadoop/hadoop.env 
+        networks:
+            - spark-network
+
+    historyserver:
+        image: bde2020/hadoop-historyserver:2.0.0-hadoop3.1.1-java8
+        container_name: historyserver
+        build:
+            context: ./docker-hadoop/historyserver
+        environment:
+            SERVICE_PRECONDITION: "namenode:9870 datanode1:9864 datanode2:9864 resourcemanager:8088"
+        volumes:
+            - hadoop_historyserver:/hadoop/yarn/timeline
+        env_file:
+            - ./docker-hadoop/hadoop.env 
+        networks:
+            - spark-network
+
+volumes:
+    hadoop_namenode:
+    hadoop_datanode1:
+    hadoop_datanode2:    
+    hadoop_historyserver:
+    jupyter_data:
+
+networks:
+    spark-network:
+        driver: bridge
+        ipam:
+            driver: default
+
