@@ -51,7 +51,8 @@ services:
             - spark-network
         environment:
             - JUPYTER_ENABLE_LAB=yes
-            - PYSPARK_PYTHON="/usr/bin/python3"
+            - PYSPARK_PYTHON=/usr/bin/python3
+            - PYSPARK_DRIVER_PYTHON=/opt/conda/bin/python
     
     namenode:
         image: bde2020/hadoop-namenode:2.0.0-hadoop3.1.1-java8
