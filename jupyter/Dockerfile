@@ -1,15 +1,20 @@
 FROM jupyter/base-notebook
 
 USER root
-RUN conda install requests-kerberos -y 
+RUN conda update -n base conda && \
+    conda install -y requests-kerberos && \   
+    conda install -c plotly -c defaults -c conda-forge "jupyterlab>=1.0" jupyterlab-dash=0.1.0a3
 
-USER $NB_USER
+#USER $NB_USER
 # install spark magic and kernels
 RUN pip install --upgrade requests-kerberos pyspark sparkmagic && \
     jupyter nbextension enable --py --sys-prefix widgetsnbextension && \
     jupyter labextension install @jupyter-widgets/jupyterlab-manager
 
 USER root
+RUN apt update && apt install -y git && \
+    rm -rf /var/lib/apt/lists/*
+
 #RUN apt update && apt install -y default-jdk && \
 #    rm -rf /var/lib/apt/lists/*
 
@@ -43,4 +48,3 @@ CMD ["start-notebook.sh", "--NotebookApp.iopub_data_rate_limit=1000000000"]
 
 USER $NB_USER
 ENV PATH="/usr/lib/jvm/jdk1.8.0_221/bin:$PATH"
-ENV GRANT_SUDO="yes"

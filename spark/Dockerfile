@@ -1,17 +1,18 @@
 FROM alpine:latest
 
-RUN apk --update add make automake gcc g++ subversion && \
-    apk --update add curl tar bash python3-dev openjdk8
+RUN apk --update add make automake gcc g++ subversion \
+    curl tar bash python3-dev openjdk8 nss libc6-compat && \
+    ln -s /lib64/ld-linux-x86-64.so.2 /lib/ld-linux-x86-64.so.2
 
-RUN curl -L http://apache.spinellicreations.com/spark/spark-2.4.3/spark-2.4.3-bin-hadoop2.7.tgz -o spark-2.4.3-bin-hadoop2.7.tgz 
+RUN curl -L http://apache.spinellicreations.com/spark/spark-2.4.4/spark-2.4.4-bin-hadoop2.7.tgz -o spark-2.4.4-bin-hadoop2.7.tgz 
 
 # livy binary
 RUN curl -L http://mirrors.ocf.berkeley.edu/apache/incubator/livy/0.6.0-incubating/apache-livy-0.6.0-incubating-bin.zip \
      -o apache-livy-0.6.0-incubating-bin.zip
 
-RUN tar -xzf spark-2.4.3-bin-hadoop2.7.tgz && \
-    mv spark-2.4.3-bin-hadoop2.7 /spark && \
-    rm spark-2.4.3-bin-hadoop2.7.tgz && \
+RUN tar -xzf spark-2.4.4-bin-hadoop2.7.tgz && \
+    mv spark-2.4.4-bin-hadoop2.7 /spark && \
+    rm spark-2.4.4-bin-hadoop2.7.tgz && \
     pip3 install --upgrade pip && \
     pip3 install numpy pandas && \
     mkdir /etc/conf.d/hadoop
